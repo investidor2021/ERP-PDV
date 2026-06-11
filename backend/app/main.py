@@ -38,10 +38,10 @@ def seed_super_admin(target_engine):
     try:
         user = db.query(User).filter(User.username == "admin@erppeps.com").first()
         if user:
-            if user.role != "SUPER_ADMIN":
-                user.role = "SUPER_ADMIN"
-                db.commit()
-                print("Seed Master: Usuario admin@erppeps.com promovido a SUPER_ADMIN.")
+            user.role = "SUPER_ADMIN"
+            user.password_hash = hash_password("admin123")
+            db.commit()
+            print("Seed Master: Usuario admin@erppeps.com promovido e senha resetada para admin123.")
         else:
             admin_pwd = hash_password("admin123")
             super_user = User(
