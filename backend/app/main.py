@@ -35,8 +35,13 @@ def seed_super_admin(target_engine):
     from app.core.security import hash_password
     db = Session(bind=target_engine)
     try:
-        sa = db.query(User).filter(User.role == "SUPER_ADMIN").first()
-        if not sa:
+        user = db.query(User).filter(User.username == "admin@erppeps.com").first()
+        if user:
+            if user.role != "SUPER_ADMIN":
+                user.role = "SUPER_ADMIN"
+                db.commit()
+                print("Seed Master: Usuario admin@erppeps.com promovido a SUPER_ADMIN.")
+        else:
             admin_pwd = hash_password("admin123")
             super_user = User(
                 username="admin@erppeps.com",
