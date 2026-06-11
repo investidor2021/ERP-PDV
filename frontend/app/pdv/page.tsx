@@ -71,7 +71,7 @@ export default function PDVPage() {
   const [descontoVenda, setDescontoVenda] = useState(0);
 
   // Múltiplos pagamentos
-  const [pagamentosLançados, setPagamentosLançados] = useState<{forma_pagamento: string, valor: number, data_vencimento?: string, parcelas?: number, bandeira?: string, taxa_percentual?: number}[]>([]);
+  const [pagamentosLançados, setPagamentosLançados] = useState<{forma_pagamento: string, valor: number, data_vencimento?: string, parcelas?: number, bandeira?: string, taxa_percentual?: number, repassado?: boolean, taxa_valor_repassado?: number}[]>([]);
   const [formaAtual, setFormaAtual] = useState("PIX");
   const [valorPagamentoAtual, setValorPagamentoAtual] = useState(0);
   const [dataVencimentoAtual, setDataVencimentoAtual] = useState("");

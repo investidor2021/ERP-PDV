@@ -209,7 +209,7 @@ export default function BudgetsPage() {
 
   const changeStatus = async (id: number, statusStr: string) => {
     try {
-      await api.post(`/budgets/${id}/status?status_str=${statusStr}`);
+      await api.post(`/budgets/${id}/status?status_str=${statusStr}`, {});
       loadBudgets();
     } catch (err: any) {
       alert(err.message || "Erro ao mudar status.");
@@ -222,7 +222,7 @@ export default function BudgetsPage() {
       const payload: any = {};
       if (selectedSeller) payload.vendedor_id = selectedSeller;
       
-      const res = await api.post(`/budgets/${convertingBudgetId}/converter?vendedor_id=${selectedSeller || ""}&forma_pagamento=PIX`);
+      const res = await api.post(`/budgets/${convertingBudgetId}/converter?vendedor_id=${selectedSeller || ""}&forma_pagamento=PIX`, {});
       alert(`Orçamento convertido na venda nº ${res.numero_venda} com sucesso!`);
       setConvertingBudgetId(null);
       loadBudgets();
