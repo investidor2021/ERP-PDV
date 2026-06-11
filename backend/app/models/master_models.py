@@ -6,6 +6,7 @@ BaseMaster = declarative_base()
 
 class Tenant(BaseMaster):
     __tablename__ = "tenants"
+    __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, index=True)
     tenant_code = Column(String, unique=True, index=True, nullable=False) # e.g. "empresa_a"
@@ -15,6 +16,7 @@ class Tenant(BaseMaster):
 
 class User(BaseMaster):
     __tablename__ = "users"
+    __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False) # e.g. "email@email.com"

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.core.database import get_master_db, get_tenant_engine
+from app.core.database import get_master_db, init_tenant_db
 from app.models.master_models import Tenant, User
 from app.schemas import schemas
 from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
@@ -72,7 +72,7 @@ def register_company(payload: schemas.CompanyRegister, db: Session = Depends(get
 
     # Instantiate tenant database dynamically and run seeding
     try:
-        get_tenant_engine(tenant_code)
+        init_tenant_db(tenant_code)
     except Exception as e:
         print(f"Erro ao inicializar banco do tenant {tenant_code}: {e}")
 

@@ -2,9 +2,10 @@ import os
 import re
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List
 
-from app.core.database import get_master_db, get_tenant_db_path, get_tenant_engine
+from app.core.database import get_master_db, get_tenant_db_path, init_tenant_db, IS_POSTGRES
 from app.models.master_models import Tenant, User
 from app.schemas import schemas
 from app.core.security import decode_access_token
@@ -34,14 +35,28 @@ def get_current_super_admin(request: Request, db: Session = Depends(get_master_d
         )
     return user
 
-def get_db_size(tenant_code: str) -> float:
-    try:
-        path = get_tenant_db_path(tenant_code)
-        if os.path.exists(path):
-            return os.path.getsize(path) / 1024.0  # in KB
-    except Exception:
-        pass
-    return 0.0
+def get_db_size(tenant_code: str, db: Session) -> float:
+    if IS_POSTGRES:
+        try:
+            # Query the table size in the specific schema in PostgreSQL
+            res = db.execute(text(f"""
+                SELECT COALESCE(sum(pg_total_relation_size(c.oid)), 0)
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = '{tenant_code}' AND c.relkind = 'r';
+            """)).scalar()
+            return float(res) / 1024.0  # in KB
+        except Exception as e:
+            print(f"Erro ao obter tamanho do schema Postgres {tenant_code}: {e}")
+            return 0.0
+    else:
+        try:
+            path = get_tenant_db_path(tenant_code)
+            if os.path.exists(path):
+                return os.path.getsize(path) / 1024.0  # in KB
+        except Exception:
+            pass
+        return 0.0
 
 @router.get("/tenants", response_model=List[schemas.TenantResponseSchema])
 def list_tenants(
@@ -52,7 +67,7 @@ def list_tenants(
     result = []
     for t in tenants:
         admin = db.query(User).filter(User.tenant_code == t.tenant_code, User.role == "ADMIN").first()
-        db_size = get_db_size(t.tenant_code)
+        db_size = get_db_size(t.tenant_code, db)
         result.append({
             "id": t.id,
             "tenant_code": t.tenant_code,
@@ -104,7 +119,7 @@ def create_tenant(
     db.commit()
 
     try:
-        get_tenant_engine(tenant_code)
+        init_tenant_db(tenant_code)
     except Exception as e:
         print(f"Erro ao inicializar banco do tenant {tenant_code}: {e}")
 
@@ -140,7 +155,7 @@ def get_stats(
     
     total_size = 0.0
     for t in tenants:
-        total_size += get_db_size(t.tenant_code)
+        total_size += get_db_size(t.tenant_code, db)
         
     return {
         "total_tenants": total_tenants,

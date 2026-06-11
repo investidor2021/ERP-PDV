@@ -2,10 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.router import api_router
-from app.core.database import engine, Base, SessionLocal, master_engine
+from app.core.database import engine, Base, SessionLocal, master_engine, IS_POSTGRES, postgres_engine
 from app.models.models import Cliente, Vendedor, Servico, Produto
 from app.models.master_models import BaseMaster
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 import os
 import glob
@@ -69,84 +70,130 @@ try:
 except Exception as e:
     print(f"Alerta de seed no master: {e}")
 
+def run_migrations_for_tenant_session(db: Session):
+    # Migration for contas_receber
+    try:
+        db.execute(text("ALTER TABLE contas_receber ADD COLUMN taxa_valor FLOAT DEFAULT 0.0"))
+        db.commit()
+    except Exception:
+        db.rollback()
+        
+    try:
+        db.execute(text("ALTER TABLE contas_receber ADD COLUMN valor_liquido FLOAT"))
+        db.commit()
+    except Exception:
+        db.rollback()
+        
+    # Migration for produtos
+    for col, col_type in [
+        ("estoque_minimo", "INTEGER DEFAULT 0"),
+        ("estoque_maximo", "INTEGER DEFAULT 0"),
+        ("marca", "VARCHAR"),
+        ("categoria", "VARCHAR"),
+        ("peso_liquido", "FLOAT DEFAULT 0.0"),
+        ("peso_bruto", "FLOAT DEFAULT 0.0"),
+        ("cfop_padrao", "VARCHAR"),
+        ("origem_mercadoria", "INTEGER DEFAULT 0"),
+        ("localizacao", "VARCHAR")
+    ]:
+        try:
+            db.execute(text(f"ALTER TABLE produtos ADD COLUMN {col} {col_type}"))
+            db.commit()
+        except Exception:
+            db.rollback()
+            
+    # Migration for servicos
+    for col, col_type in [
+        ("aliquota_iss", "FLOAT DEFAULT 0.0"),
+        ("codigo_lc116", "VARCHAR"),
+        ("unidade_medida", "VARCHAR DEFAULT 'UN'"),
+        ("custo_estimado", "FLOAT DEFAULT 0.0"),
+        ("observacoes", "TEXT")
+    ]:
+        try:
+            db.execute(text(f"ALTER TABLE servicos ADD COLUMN {col} {col_type}"))
+            db.commit()
+        except Exception:
+            db.rollback()
+
 def run_migrations_for_engine(target_engine):
     db = SessionLocal(bind=target_engine)
     try:
-        # Migration for contas_receber
-        try:
-            db.execute(text("ALTER TABLE contas_receber ADD COLUMN taxa_valor FLOAT DEFAULT 0.0"))
-            db.commit()
-        except Exception:
-            db.rollback()
-            
-        try:
-            db.execute(text("ALTER TABLE contas_receber ADD COLUMN valor_liquido FLOAT"))
-            db.commit()
-        except Exception:
-            db.rollback()
-            
-        # Migration for produtos
-        for col, col_type in [
-            ("estoque_minimo", "INTEGER DEFAULT 0"),
-            ("estoque_maximo", "INTEGER DEFAULT 0"),
-            ("marca", "VARCHAR"),
-            ("categoria", "VARCHAR"),
-            ("peso_liquido", "FLOAT DEFAULT 0.0"),
-            ("peso_bruto", "FLOAT DEFAULT 0.0"),
-            ("cfop_padrao", "VARCHAR"),
-            ("origem_mercadoria", "INTEGER DEFAULT 0"),
-            ("localizacao", "VARCHAR")
-        ]:
-            try:
-                db.execute(text(f"ALTER TABLE produtos ADD COLUMN {col} {col_type}"))
-                db.commit()
-            except Exception:
-                db.rollback()
-                
-        # Migration for servicos
-        for col, col_type in [
-            ("aliquota_iss", "FLOAT DEFAULT 0.0"),
-            ("codigo_lc116", "VARCHAR"),
-            ("unidade_medida", "VARCHAR DEFAULT 'UN'"),
-            ("custo_estimado", "FLOAT DEFAULT 0.0"),
-            ("observacoes", "TEXT")
-        ]:
-            try:
-                db.execute(text(f"ALTER TABLE servicos ADD COLUMN {col} {col_type}"))
-                db.commit()
-            except Exception:
-                db.rollback()
+        run_migrations_for_tenant_session(db)
     finally:
         db.close()
 
+def run_migrations_for_postgres():
+    from app.models.master_models import Tenant
+    from sqlalchemy.orm import Session
+    db_master = Session(bind=master_engine)
+    try:
+        tenants = db_master.query(Tenant).all()
+        for t in tenants:
+            try:
+                with postgres_engine.connect() as conn:
+                    conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {t.tenant_code};"))
+                    conn.commit()
+                with postgres_engine.begin() as conn:
+                    conn.execute(text(f"SET search_path TO {t.tenant_code}, public;"))
+                    Base.metadata.create_all(bind=conn)
+                
+                db_tenant = Session(bind=postgres_engine)
+                try:
+                    db_tenant.execute(text(f"SET search_path TO {t.tenant_code}, public;"))
+                    run_migrations_for_tenant_session(db_tenant)
+                    print(f"Migration: Schema Postgres {t.tenant_code} atualizado com sucesso.")
+                finally:
+                    db_tenant.close()
+            except Exception as e:
+                print(f"Erro ao migrar schema Postgres {t.tenant_code}: {e}")
+    finally:
+        db_master.close()
+
 # Run migrations on default DB
 try:
+    if IS_POSTGRES:
+        with postgres_engine.connect() as conn:
+            conn.execute(text("CREATE SCHEMA IF NOT EXISTS \"default\";"))
+            conn.commit()
+        with postgres_engine.begin() as conn:
+            conn.execute(text("SET search_path TO \"default\", public;"))
+            Base.metadata.create_all(bind=conn)
+            
     run_migrations_for_engine(engine)
-    print("Migration: Banco padrão (default) sincronizado com sucesso.")
+    print("Migration: Banco padrao (default) sincronizado com sucesso.")
 except Exception as e:
-    print(f"Alerta de migração no banco padrão: {e}")
+    print(f"Alerta de migracao no banco padrao: {e}")
 
 # Seed default database
 db = SessionLocal()
 try:
+    if IS_POSTGRES:
+        db.execute(text("SET search_path TO \"default\", public;"))
     seed_database(db)
 finally:
     db.close()
 
-# Discover and run migrations on all tenant DBs in backend/tenants/*.db
-backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-tenants_dir = os.path.join(backend_dir, "tenants")
-if os.path.exists(tenants_dir):
-    tenant_files = glob.glob(os.path.join(tenants_dir, "*.db"))
-    for tf in tenant_files:
-        try:
-            tenant_engine = create_engine(f"sqlite:///{tf}", connect_args={"check_same_thread": False})
-            Base.metadata.create_all(bind=tenant_engine)
-            run_migrations_for_engine(tenant_engine)
-            tenant_engine.dispose()
-            print(f"Migration: Inquilino {os.path.basename(tf)} atualizado com sucesso.")
-        except Exception as e:
-            print(f"Erro ao migrar tenant banco {tf}: {e}")
+# Discover and run migrations on all tenant DBs
+if IS_POSTGRES:
+    try:
+        run_migrations_for_postgres()
+    except Exception as e:
+        print(f"Erro ao executar migracoes de tenants no Postgres: {e}")
+else:
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    tenants_dir = os.path.join(backend_dir, "tenants")
+    if os.path.exists(tenants_dir):
+        tenant_files = glob.glob(os.path.join(tenants_dir, "*.db"))
+        for tf in tenant_files:
+            try:
+                tenant_engine = create_engine(f"sqlite:///{tf}", connect_args={"check_same_thread": False})
+                Base.metadata.create_all(bind=tenant_engine)
+                run_migrations_for_engine(tenant_engine)
+                tenant_engine.dispose()
+                print(f"Migration: Inquilino {os.path.basename(tf)} atualizado com sucesso.")
+            except Exception as e:
+                print(f"Erro ao migrar tenant banco {tf}: {e}")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
