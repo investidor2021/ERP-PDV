@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [activeTenant, setActiveTenant] = useState("default");
   const pathname = usePathname();
 
   // Load from localStorage on client mount
@@ -14,12 +15,20 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
     if (saved !== null) {
       setIsCollapsed(saved === "true");
     }
+    const savedTenant = localStorage.getItem("active_tenant_id") || "default";
+    setActiveTenant(savedTenant);
   }, []);
 
   const toggleSidebar = () => {
     const nextState = !isCollapsed;
     setIsCollapsed(nextState);
     localStorage.setItem("sidebar_collapsed", String(nextState));
+  };
+
+  const handleTenantChange = (newTenant: string) => {
+    localStorage.setItem("active_tenant_id", newTenant);
+    setActiveTenant(newTenant);
+    window.location.reload();
   };
 
   const navItems = [
@@ -68,6 +77,37 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
             >
               ◀
             </button>
+          )}
+        </div>
+
+        {/* Tenant / Empresa Selector */}
+        <div className="border-b border-neutral-800/80 shrink-0">
+          {!isCollapsed ? (
+            <div className="px-4 py-3 bg-neutral-950/20">
+              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">Empresa / Banco Ativo</label>
+              <select
+                value={activeTenant}
+                onChange={(e) => handleTenantChange(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-850 focus:border-emerald-500 rounded px-2.5 py-1.5 text-[11px] outline-none text-neutral-300 font-semibold cursor-pointer transition"
+              >
+                <option value="default">Matriz (Padrão)</option>
+                <option value="empresa_a">Empresa A</option>
+                <option value="empresa_b">Empresa B</option>
+                <option value="empresa_c">Empresa C</option>
+              </select>
+            </div>
+          ) : (
+            <div 
+              className="py-3 text-center text-xs font-black text-emerald-400 bg-neutral-950/20 cursor-pointer hover:bg-neutral-800/30 transition"
+              title={`Empresa: ${activeTenant === "default" ? "Matriz (Padrão)" : activeTenant}`}
+              onClick={() => {
+                const choices = ["default", "empresa_a", "empresa_b", "empresa_c"];
+                const nextIdx = (choices.indexOf(activeTenant) + 1) % choices.length;
+                handleTenantChange(choices[nextIdx]);
+              }}
+            >
+              🏢
+            </div>
           )}
         </div>
 
