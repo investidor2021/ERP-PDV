@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import SidebarLayout from "@/components/SidebarLayout";
+import AuthGuard from "@/components/AuthGuard";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,8 +20,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable} h-full antialiased`}>
-      <body className="h-full bg-neutral-950 text-neutral-100 font-sans flex overflow-hidden">
-        <SidebarLayout>{children}</SidebarLayout>
+      <body className="h-full bg-neutral-950 text-neutral-100 font-sans flex overflow-hidden w-full">
+        <AuthGuard>{children}</AuthGuard>
       </body>
     </html>
   );

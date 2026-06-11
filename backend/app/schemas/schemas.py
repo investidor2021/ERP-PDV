@@ -334,3 +334,31 @@ class ConfiguracaoTaxaResponse(ConfiguracaoTaxaBase):
 
     class Config:
         from_attributes = True
+
+# --- AUTH & TENANT SCHEMAS ---
+class CompanyRegister(BaseModel):
+    company_name: str
+    admin_name: str
+    username: str
+    password: str
+
+class LoginSchema(BaseModel):
+    username: str
+    password: str
+
+class UserCreateSchema(BaseModel):
+    name: str
+    username: str
+    password: str
+    role: str = "USER" # "ADMIN" or "USER"
+
+class UserResponseSchema(BaseModel):
+    id: int
+    name: str
+    username: str
+    role: str
+    tenant_code: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

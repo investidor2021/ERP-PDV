@@ -4,19 +4,33 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+interface UserSession {
+  name: string;
+  username: string;
+  role: string;
+  tenant_code: string;
+  company_name: string;
+}
+
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeTenant, setActiveTenant] = useState("default");
+  const [userInfo, setUserInfo] = useState<UserSession | null>(null);
   const pathname = usePathname();
 
-  // Load from localStorage on client mount
+  // Load configuration and user session on mount
   useEffect(() => {
     const saved = localStorage.getItem("sidebar_collapsed");
     if (saved !== null) {
       setIsCollapsed(saved === "true");
     }
-    const savedTenant = localStorage.getItem("active_tenant_id") || "default";
-    setActiveTenant(savedTenant);
+    const savedUser = localStorage.getItem("user_info");
+    if (savedUser) {
+      try {
+        setUserInfo(JSON.parse(savedUser));
+      } catch (e) {
+        console.error(e);
+      }
+    }
   }, []);
 
   const toggleSidebar = () => {
@@ -25,10 +39,10 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
     localStorage.setItem("sidebar_collapsed", String(nextState));
   };
 
-  const handleTenantChange = (newTenant: string) => {
-    localStorage.setItem("active_tenant_id", newTenant);
-    setActiveTenant(newTenant);
-    window.location.reload();
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_info");
+    window.location.href = "/login";
   };
 
   const navItems = [
@@ -80,31 +94,22 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
           )}
         </div>
 
-        {/* Tenant / Empresa Selector */}
+        {/* User Session Info / Enterprise Name */}
         <div className="border-b border-neutral-800/80 shrink-0">
           {!isCollapsed ? (
-            <div className="px-4 py-3 bg-neutral-950/20">
-              <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">Empresa / Banco Ativo</label>
-              <select
-                value={activeTenant}
-                onChange={(e) => handleTenantChange(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-850 focus:border-emerald-500 rounded px-2.5 py-1.5 text-[11px] outline-none text-neutral-300 font-semibold cursor-pointer transition"
-              >
-                <option value="default">Matriz (Padrão)</option>
-                <option value="empresa_a">Empresa A</option>
-                <option value="empresa_b">Empresa B</option>
-                <option value="empresa_c">Empresa C</option>
-              </select>
+            <div className="px-4 py-3 bg-neutral-950/25 flex flex-col space-y-1">
+              <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">Empresa Conectada</span>
+              <span className="text-xs font-bold text-emerald-400 truncate max-w-full" title={userInfo?.company_name || "Matriz (Padrão)"}>
+                🏢 {userInfo?.company_name || "Matriz (Padrão)"}
+              </span>
+              <span className="text-[10px] text-neutral-400 truncate max-w-full mt-0.5">
+                👤 {userInfo?.name || "Operador"} ({userInfo?.role === "ADMIN" ? "Admin" : "Usuário"})
+              </span>
             </div>
           ) : (
             <div 
-              className="py-3 text-center text-xs font-black text-emerald-400 bg-neutral-950/20 cursor-pointer hover:bg-neutral-800/30 transition"
-              title={`Empresa: ${activeTenant === "default" ? "Matriz (Padrão)" : activeTenant}`}
-              onClick={() => {
-                const choices = ["default", "empresa_a", "empresa_b", "empresa_c"];
-                const nextIdx = (choices.indexOf(activeTenant) + 1) % choices.length;
-                handleTenantChange(choices[nextIdx]);
-              }}
+              className="py-3 text-center text-xs font-black text-emerald-400 bg-neutral-950/20 cursor-pointer hover:bg-neutral-850 transition"
+              title={`Empresa: ${userInfo?.company_name || "Matriz (Padrão)"} \nOperador: ${userInfo?.name || "Operador"}`}
             >
               🏢
             </div>
@@ -152,12 +157,24 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
           </div>
         )}
 
-        {/* Footer Info */}
-        {!isCollapsed && (
-          <div className="p-4 border-t border-neutral-800 text-[10px] text-neutral-500 text-center whitespace-nowrap overflow-hidden">
-            ERP PEPS v1.1.0 &copy; 2026
-          </div>
-        )}
+        {/* Footer Info & Logout */}
+        <div className="border-t border-neutral-800 shrink-0 p-2 space-y-1">
+          <button
+            onClick={handleLogout}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold text-red-400 hover:bg-red-950/20 hover:text-red-300 transition ${
+              isCollapsed ? "justify-center" : ""
+            }`}
+            title="Sair do Sistema"
+          >
+            <span className="text-sm shrink-0">🚪</span>
+            {!isCollapsed && <span>Sair / Logout</span>}
+          </button>
+          {!isCollapsed && (
+            <div className="text-[9px] text-neutral-600 text-center pt-1 block">
+              ERP PEPS v1.2.0 SaaS &copy; 2026
+            </div>
+          )}
+        </div>
       </aside>
 
       {/* Main Content Area */}

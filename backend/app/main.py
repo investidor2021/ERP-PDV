@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.router import api_router
-from app.core.database import engine, Base, SessionLocal
+from app.core.database import engine, Base, SessionLocal, master_engine
 from app.models.models import Cliente, Vendedor, Servico, Produto
+from app.models.master_models import BaseMaster
 from sqlalchemy import text
 
 import os
@@ -11,8 +12,9 @@ import glob
 from sqlalchemy import create_engine
 from app.core.db_seeding import seed_database
 
-# Create SQLite tables for default database
+# Create SQLite tables for default database and master database
 Base.metadata.create_all(bind=engine)
+BaseMaster.metadata.create_all(bind=master_engine)
 
 def run_migrations_for_engine(target_engine):
     db = SessionLocal(bind=target_engine)

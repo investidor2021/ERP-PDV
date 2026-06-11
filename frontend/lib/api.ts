@@ -9,10 +9,12 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
     headers.set("Content-Type", "application/json");
   }
 
-  // Inject Active Tenant ID from localStorage if client-side
+  // Inject JWT Authorization token from localStorage if client-side
   if (typeof window !== "undefined") {
-    const tenantId = localStorage.getItem("active_tenant_id") || "default";
-    headers.set("X-Tenant-ID", tenantId);
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
   }
 
   const response = await fetch(url, {
