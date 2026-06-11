@@ -9,15 +9,58 @@ from sqlalchemy import text
 # Create SQLite tables
 Base.metadata.create_all(bind=engine)
 
-# Migration: check and add new columns to contas_receber if they don't exist
+# Migration: check and add new columns if they don't exist
 db = SessionLocal()
 try:
-    db.execute(text("ALTER TABLE contas_receber ADD COLUMN taxa_valor FLOAT DEFAULT 0.0"))
-    db.execute(text("ALTER TABLE contas_receber ADD COLUMN valor_liquido FLOAT"))
-    db.commit()
-    print("Migration: Colunas de taxa adicionadas a contas_receber com sucesso.")
+    # Migration for contas_receber
+    try:
+        db.execute(text("ALTER TABLE contas_receber ADD COLUMN taxa_valor FLOAT DEFAULT 0.0"))
+        db.commit()
+    except Exception:
+        db.rollback()
+        
+    try:
+        db.execute(text("ALTER TABLE contas_receber ADD COLUMN valor_liquido FLOAT"))
+        db.commit()
+    except Exception:
+        db.rollback()
+        
+    # Migration for produtos
+    for col, col_type in [
+        ("estoque_minimo", "INTEGER DEFAULT 0"),
+        ("estoque_maximo", "INTEGER DEFAULT 0"),
+        ("marca", "VARCHAR"),
+        ("categoria", "VARCHAR"),
+        ("peso_liquido", "FLOAT DEFAULT 0.0"),
+        ("peso_bruto", "FLOAT DEFAULT 0.0"),
+        ("cfop_padrao", "VARCHAR"),
+        ("origem_mercadoria", "INTEGER DEFAULT 0"),
+        ("localizacao", "VARCHAR")
+    ]:
+        try:
+            db.execute(text(f"ALTER TABLE produtos ADD COLUMN {col} {col_type}"))
+            db.commit()
+        except Exception:
+            db.rollback()
+            
+    # Migration for servicos
+    for col, col_type in [
+        ("aliquota_iss", "FLOAT DEFAULT 0.0"),
+        ("codigo_lc116", "VARCHAR"),
+        ("unidade_medida", "VARCHAR DEFAULT 'UN'"),
+        ("custo_estimado", "FLOAT DEFAULT 0.0"),
+        ("observacoes", "TEXT")
+    ]:
+        try:
+            db.execute(text(f"ALTER TABLE servicos ADD COLUMN {col} {col_type}"))
+            db.commit()
+        except Exception:
+            db.rollback()
+            
+    print("Migration: Banco de dados sincronizado e colunas adicionadas com sucesso.")
 except Exception as e:
     db.rollback()
+    print(f"Alerta de migração: {e}")
 finally:
     db.close()
 

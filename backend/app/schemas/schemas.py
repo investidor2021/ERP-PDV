@@ -11,6 +11,15 @@ class ProductBase(BaseModel):
     unidade: Optional[str] = "UN"
     ncm: Optional[str] = None
     preco_venda: float = 0.0
+    estoque_minimo: Optional[int] = 0
+    estoque_maximo: Optional[int] = 0
+    marca: Optional[str] = None
+    categoria: Optional[str] = None
+    peso_liquido: Optional[float] = 0.0
+    peso_bruto: Optional[float] = 0.0
+    cfop_padrao: Optional[str] = None
+    origem_mercadoria: Optional[int] = 0
+    localizacao: Optional[str] = None
 
 class ProductCreate(ProductBase):
     pass
@@ -23,6 +32,15 @@ class ProductUpdate(BaseModel):
     unidade: Optional[str] = None
     ncm: Optional[str] = None
     preco_venda: Optional[float] = None
+    estoque_minimo: Optional[int] = None
+    estoque_maximo: Optional[int] = None
+    marca: Optional[str] = None
+    categoria: Optional[str] = None
+    peso_liquido: Optional[float] = None
+    peso_bruto: Optional[float] = None
+    cfop_padrao: Optional[str] = None
+    origem_mercadoria: Optional[int] = None
+    localizacao: Optional[str] = None
 
 class ProductResponse(ProductBase):
     id: int
@@ -101,9 +119,25 @@ class ServiceBase(BaseModel):
     descricao: str
     valor_padrao: float = 0.0
     categoria: Optional[str] = None
+    aliquota_iss: Optional[float] = 0.0
+    codigo_lc116: Optional[str] = None
+    unidade_medida: Optional[str] = "UN"
+    custo_estimado: Optional[float] = 0.0
+    observacoes: Optional[str] = None
 
 class ServiceCreate(ServiceBase):
     pass
+
+class ServiceUpdate(BaseModel):
+    codigo: Optional[str] = None
+    descricao: Optional[str] = None
+    valor_padrao: Optional[float] = None
+    categoria: Optional[str] = None
+    aliquota_iss: Optional[float] = None
+    codigo_lc116: Optional[str] = None
+    unidade_medida: Optional[str] = None
+    custo_estimado: Optional[float] = None
+    observacoes: Optional[str] = None
 
 class ServiceResponse(ServiceBase):
     id: int

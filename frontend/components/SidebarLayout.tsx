@@ -26,6 +26,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
     { href: "/", label: "Dashboard Geral", icon: "📊" },
     { href: "/pdv", label: "Venda Rápida (PDV)", icon: "⚡", bold: true },
     { href: "/products", label: "Catálogo & Lotes", icon: "📦" },
+    { href: "/services", label: "Cadastro de Serviços", icon: "🛠️" },
     { href: "/clients", label: "Cadastro de Clientes", icon: "👥" },
     { href: "/budgets", label: "Orçamentos", icon: "📋" },
     { href: "/sales", label: "Histórico de Vendas", icon: "🔄" },

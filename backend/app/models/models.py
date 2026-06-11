@@ -15,6 +15,17 @@ class Produto(Base):
     ncm = Column(String, nullable=True)
     estoque_atual = Column(Integer, default=0)
     preco_venda = Column(Float, default=0.0)
+    
+    # New commercial and logisitic attributes
+    estoque_minimo = Column(Integer, default=0)
+    estoque_maximo = Column(Integer, default=0)
+    marca = Column(String, nullable=True)
+    categoria = Column(String, nullable=True)
+    peso_liquido = Column(Float, default=0.0)
+    peso_bruto = Column(Float, default=0.0)
+    cfop_padrao = Column(String, nullable=True)
+    origem_mercadoria = Column(Integer, default=0)
+    localizacao = Column(String, nullable=True)
 
     # Relationships
     lotes = relationship("Lote", back_populates="produto", cascade="all, delete-orphan")
@@ -133,6 +144,13 @@ class Servico(Base):
     descricao = Column(String, nullable=False)
     valor_padrao = Column(Float, default=0.0)
     categoria = Column(String, nullable=True) # Ex: Instalação, Manutenção, Montagem
+    
+    # New fiscal and control fields
+    aliquota_iss = Column(Float, default=0.0)
+    codigo_lc116 = Column(String, nullable=True)
+    unidade_medida = Column(String, default="UN")
+    custo_estimado = Column(Float, default=0.0)
+    observacoes = Column(Text, nullable=True)
 
     # Relationships
     itens_venda = relationship("VendaItem", back_populates="servico")

@@ -13,6 +13,15 @@ interface Product {
   ncm: string | null;
   estoque_atual: number;
   preco_venda: number;
+  estoque_minimo: number;
+  estoque_maximo: number;
+  marca: string | null;
+  categoria: string | null;
+  peso_liquido: number;
+  peso_bruto: number;
+  cfop_padrao: string | null;
+  origem_mercadoria: number;
+  localizacao: string | null;
 }
 
 interface Lot {
@@ -38,13 +47,25 @@ export default function ProductsPage() {
   const [xmlError, setXmlError] = useState("");
   const [xmlLoading, setXmlLoading] = useState(false);
 
-  // Manual product register form
+  // Editing state
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Manual product register/edit form states
   const [prodSku, setProdSku] = useState("");
   const [prodDesc, setProdDesc] = useState("");
   const [prodBar, setProdBar] = useState("");
   const [prodUnit, setProdUnit] = useState("UN");
   const [prodNcm, setProdNcm] = useState("");
   const [prodPrice, setProdPrice] = useState("");
+  const [prodMinStock, setProdMinStock] = useState("0");
+  const [prodMaxStock, setProdMaxStock] = useState("0");
+  const [prodBrand, setProdBrand] = useState("");
+  const [prodCategory, setProdCategory] = useState("");
+  const [prodNetWeight, setProdNetWeight] = useState("0");
+  const [prodGrossWeight, setProdGrossWeight] = useState("0");
+  const [prodCfop, setProdCfop] = useState("");
+  const [prodOrigin, setProdOrigin] = useState("0");
+  const [prodLocation, setProdLocation] = useState("");
   const [showManualProd, setShowManualProd] = useState(false);
 
   // Manual lot register form
@@ -52,6 +73,9 @@ export default function ProductsPage() {
   const [lotCost, setLotCost] = useState("");
   const [lotDate, setLotDate] = useState("");
   const [showManualLot, setShowManualLot] = useState(false);
+
+  // Active product selected object
+  const activeProduct = products.find(p => p.id === selectedProductId);
 
   useEffect(() => {
     loadProducts();
@@ -122,33 +146,96 @@ export default function ProductsPage() {
     }
   };
 
-  const registerManualProduct = async (e: React.FormEvent) => {
+  const handleAddProductClick = () => {
+    setEditingProduct(null);
+    setProdSku("");
+    setProdDesc("");
+    setProdBar("");
+    setProdUnit("UN");
+    setProdNcm("");
+    setProdPrice("");
+    setProdMinStock("0");
+    setProdMaxStock("0");
+    setProdBrand("");
+    setProdCategory("");
+    setProdNetWeight("0");
+    setProdGrossWeight("0");
+    setProdCfop("");
+    setProdOrigin("0");
+    setProdLocation("");
+    setShowManualProd(true);
+  };
+
+  const handleEditProductClick = (product: Product) => {
+    setEditingProduct(product);
+    setProdSku(product.codigo || "");
+    setProdDesc(product.descricao || "");
+    setProdBar(product.codigo_barras || "");
+    setProdUnit(product.unidade || "UN");
+    setProdNcm(product.ncm || "");
+    setProdPrice(String(product.preco_venda || 0.0));
+    setProdMinStock(String(product.estoque_minimo || 0));
+    setProdMaxStock(String(product.estoque_maximo || 0));
+    setProdBrand(product.marca || "");
+    setProdCategory(product.categoria || "");
+    setProdNetWeight(String(product.peso_liquido || 0.0));
+    setProdGrossWeight(String(product.peso_bruto || 0.0));
+    setProdCfop(product.cfop_padrao || "");
+    setProdOrigin(String(product.origem_mercadoria || 0));
+    setProdLocation(product.localizacao || "");
+    setShowManualProd(true);
+  };
+
+  const handleDeleteProduct = async (id: number) => {
+    if (!confirm("Tem certeza que deseja excluir este produto do catálogo?")) return;
+    try {
+      await api.delete(`/products/${id}`);
+      alert("Produto excluído com sucesso!");
+      setSelectedProductId(null);
+      loadProducts();
+    } catch (err: any) {
+      alert(err.message || "Erro ao excluir produto.");
+    }
+  };
+
+  const registerOrUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prodSku || !prodDesc) {
       alert("SKU e Descrição são obrigatórios.");
       return;
     }
+    const payload = {
+      codigo: prodSku,
+      codigo_fornecedor: prodSku,
+      codigo_barras: prodBar || null,
+      descricao: prodDesc,
+      unidade: prodUnit,
+      ncm: prodNcm || null,
+      preco_venda: parseFloat(prodPrice) || 0.0,
+      estoque_minimo: parseInt(prodMinStock) || 0,
+      estoque_maximo: parseInt(prodMaxStock) || 0,
+      marca: prodBrand || null,
+      categoria: prodCategory || null,
+      peso_liquido: parseFloat(prodNetWeight) || 0.0,
+      peso_bruto: parseFloat(prodGrossWeight) || 0.0,
+      cfop_padrao: prodCfop || null,
+      origem_mercadoria: parseInt(prodOrigin) || 0,
+      localizacao: prodLocation || null
+    };
+
     try {
-      await api.post("/products", {
-        codigo: prodSku,
-        codigo_fornecedor: prodSku,
-        codigo_barras: prodBar || null,
-        descricao: prodDesc,
-        unidade: prodUnit,
-        ncm: prodNcm || null,
-        preco_venda: parseFloat(prodPrice) || 0.0
-      });
-      alert("Produto cadastrado com sucesso!");
-      setProdSku("");
-      setProdDesc("");
-      setProdBar("");
-      setProdUnit("UN");
-      setProdNcm("");
-      setProdPrice("");
+      if (editingProduct) {
+        await api.put(`/products/${editingProduct.id}`, payload);
+        alert("Produto updated com sucesso!");
+      } else {
+        await api.post("/products", payload);
+        alert("Produto cadastrado com sucesso!");
+      }
       setShowManualProd(false);
+      setEditingProduct(null);
       loadProducts();
     } catch (err: any) {
-      alert(err.message || "Erro ao cadastrar produto.");
+      alert(err.message || "Erro ao salvar produto.");
     }
   };
 
@@ -188,6 +275,17 @@ export default function ProductsPage() {
     (p.codigo_barras && p.codigo_barras.includes(searchQuery))
   );
 
+  const getOrigemLabel = (val: number) => {
+    switch (val) {
+      case 0: return "0 - Nacional";
+      case 1: return "1 - Estrangeira (Importação Direta)";
+      case 2: return "2 - Estrangeira (Adquirida no Mercado Interno)";
+      case 3: return "3 - Nacional (Conteúdo Importado > 40%)";
+      case 4: return "4 - Nacional (Processo Básico)";
+      default: return "Nacional";
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -202,7 +300,7 @@ export default function ProductsPage() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => setShowManualProd(true)}
+            onClick={handleAddProductClick}
             className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-xs font-bold rounded-lg transition"
           >
             ➕ Cadastrar Manual
@@ -273,17 +371,73 @@ export default function ProductsPage() {
         {/* Right Detail Pane */}
         <div className="space-y-6">
           
-          {selectedProductId ? (
+          {activeProduct ? (
             <>
-              {/* Product Info & Price Form */}
+              {/* Product Info, Expanded Details & Price Form */}
               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-4">
-                <div>
-                  <h3 className="font-bold text-neutral-200 text-sm">
-                    {products.find(p => p.id === selectedProductId)?.descricao}
-                  </h3>
-                  <span className="text-[10px] font-mono text-neutral-500 block mt-0.5">
-                    SKU: {products.find(p => p.id === selectedProductId)?.codigo}
-                  </span>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-neutral-200 text-sm">
+                      {activeProduct.descricao}
+                    </h3>
+                    <span className="text-[10px] font-mono text-neutral-500 block mt-0.5">
+                      SKU: {activeProduct.codigo}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEditProductClick(activeProduct)}
+                      className="px-2 py-1 bg-neutral-800 text-[10px] text-emerald-400 font-bold rounded border border-neutral-700 hover:bg-neutral-750 transition"
+                      title="Editar Completo"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(activeProduct.id)}
+                      className="px-2 py-1 bg-neutral-800 text-[10px] text-red-400 font-bold rounded border border-neutral-700 hover:bg-neutral-750 transition"
+                      title="Excluir Produto"
+                    >
+                      🗑️ Excluir
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Fields Details Grid */}
+                <div className="border-t border-b border-neutral-800 py-3 grid grid-cols-2 gap-y-2 gap-x-4 text-[11px]">
+                  <div>
+                    <span className="text-neutral-500 block">Marca</span>
+                    <span className="text-neutral-300 font-medium">{activeProduct.marca || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">Categoria</span>
+                    <span className="text-neutral-300 font-medium">{activeProduct.categoria || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">Estoque Min / Max</span>
+                    <span className="text-neutral-300 font-mono">
+                      {activeProduct.estoque_minimo || 0} / {activeProduct.estoque_maximo || 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">Localização</span>
+                    <span className="text-neutral-300 font-medium">{activeProduct.localizacao || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">Peso Líq / Bruto</span>
+                    <span className="text-neutral-300 font-mono">
+                      {activeProduct.peso_liquido || 0}kg / {activeProduct.peso_bruto || 0}kg
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">CFOP Padrão</span>
+                    <span className="text-neutral-300 font-mono">{activeProduct.cfop_padrao || "—"}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-neutral-500 block">Origem Mercadoria</span>
+                    <span className="text-neutral-300 font-medium text-[10px]">
+                      {getOrigemLabel(activeProduct.origem_mercadoria)}
+                    </span>
+                  </div>
                 </div>
 
                 <form onSubmit={updatePrice} className="space-y-2">
@@ -352,13 +506,15 @@ export default function ProductsPage() {
 
       </div>
 
-      {/* MANUAL PRODUCT MODAL */}
+      {/* MANUAL PRODUCT REGISTER & EDIT MODAL */}
       {showManualProd && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={registerManualProduct} className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-lg w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-neutral-200">➕ Cadastrar Produto Manualmente</h3>
+          <form onSubmit={registerOrUpdateProduct} className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 max-h-[95vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-neutral-200">
+              {editingProduct ? "✏️ Editar Cadastro de Produto" : "➕ Novo Cadastro de Produto"}
+            </h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] text-neutral-400 font-bold uppercase">Código SKU *</label>
                 <input
@@ -369,6 +525,19 @@ export default function ProductsPage() {
                   className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none"
                 />
               </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-[10px] text-neutral-400 font-bold uppercase">Descrição / Nome do Produto *</label>
+                <input
+                  type="text"
+                  required
+                  value={prodDesc}
+                  onChange={(e) => setProdDesc(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] text-neutral-400 font-bold uppercase">Código de Barras</label>
                 <input
@@ -378,20 +547,29 @@ export default function ProductsPage() {
                   className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none"
                 />
               </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-neutral-400 font-bold uppercase">Marca</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Coca-cola, Samsung"
+                  value={prodBrand}
+                  onChange={(e) => setProdBrand(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-neutral-400 font-bold uppercase">Categoria</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Bebidas, Eletrônicos"
+                  value={prodCategory}
+                  onChange={(e) => setProdCategory(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none"
+                />
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] text-neutral-400 font-bold uppercase">Descrição / Nome do Produto *</label>
-              <input
-                type="text"
-                required
-                value={prodDesc}
-                onChange={(e) => setProdDesc(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] text-neutral-400 font-bold uppercase">Unidade</label>
                 <input
@@ -414,18 +592,105 @@ export default function ProductsPage() {
                 <label className="text-[10px] text-neutral-400 font-bold uppercase">Preço Venda R$</label>
                 <input
                   type="number"
-                  step="0.5"
+                  step="0.01"
                   value={prodPrice}
                   onChange={(e) => setProdPrice(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none font-bold"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-neutral-400 font-bold uppercase">Localização Física</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Corredor A, Prateleira 3"
+                  value={prodLocation}
+                  onChange={(e) => setProdLocation(e.target.value)}
                   className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none"
                 />
+              </div>
+            </div>
+
+            <div className="border-t border-neutral-800 pt-3">
+              <h4 className="text-[11px] font-bold text-neutral-400 uppercase mb-3">Estoque & Logística</h4>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] text-neutral-500 font-bold uppercase">Estoque Mínimo</label>
+                  <input
+                    type="number"
+                    value={prodMinStock}
+                    onChange={(e) => setProdMinStock(e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-1.5 px-2 text-xs outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] text-neutral-500 font-bold uppercase">Estoque Máximo</label>
+                  <input
+                    type="number"
+                    value={prodMaxStock}
+                    onChange={(e) => setProdMaxStock(e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-1.5 px-2 text-xs outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] text-neutral-500 font-bold uppercase">Peso Líquido (kg)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={prodNetWeight}
+                    onChange={(e) => setProdNetWeight(e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-1.5 px-2 text-xs outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] text-neutral-500 font-bold uppercase">Peso Bruto (kg)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={prodGrossWeight}
+                    onChange={(e) => setProdGrossWeight(e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-1.5 px-2 text-xs outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-neutral-800 pt-3">
+              <h4 className="text-[11px] font-bold text-neutral-400 uppercase mb-3">Dados Fiscais / Tributação</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] text-neutral-500 font-bold uppercase">CFOP Padrão</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 5102"
+                    value={prodCfop}
+                    onChange={(e) => setProdCfop(e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-1.5 px-2 text-xs outline-none font-mono"
+                  />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[9px] text-neutral-500 font-bold uppercase">Origem da Mercadoria</label>
+                  <select
+                    value={prodOrigin}
+                    onChange={(e) => setProdOrigin(e.target.value)}
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-1.5 px-2 text-xs outline-none text-neutral-300"
+                  >
+                    <option value="0">0 - Nacional</option>
+                    <option value="1">1 - Estrangeira - Importação Direta</option>
+                    <option value="2">2 - Estrangeira - Adquirida no Mercado Interno</option>
+                    <option value="3">3 - Nacional - Mercadoria com Conteúdo de Importação Superior a 40%</option>
+                    <option value="4">4 - Nacional - Produção em Conformidade com Processos Básicos</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-neutral-800">
               <button
                 type="button"
-                onClick={() => setShowManualProd(false)}
+                onClick={() => {
+                  setShowManualProd(false);
+                  setEditingProduct(null);
+                }}
                 className="px-4 py-2 text-xs font-bold border border-neutral-800 rounded-lg"
               >
                 Cancelar
@@ -434,7 +699,7 @@ export default function ProductsPage() {
                 type="submit"
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg"
               >
-                Cadastrar
+                {editingProduct ? "Salvar Alterações" : "Cadastrar Produto"}
               </button>
             </div>
           </form>

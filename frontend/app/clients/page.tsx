@@ -8,11 +8,17 @@ interface Client {
   codigo: string;
   nome_razao: string;
   cpf_cnpj: string;
+  inscricao_estadual: string | null;
   telefone: string | null;
   whatsapp: string | null;
   email: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
   cidade: string | null;
   estado: string | null;
+  cep: string | null;
   observacoes: string | null;
 }
 
@@ -21,6 +27,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   // Form states
   const [codigo, setCodigo] = useState("");
@@ -55,6 +62,57 @@ export default function ClientsPage() {
     }
   }
 
+  const handleAddClick = () => {
+    setEditingClient(null);
+    setCodigo("");
+    setNomeRazao("");
+    setCpfCnpj("");
+    setIe("");
+    setTelefone("");
+    setWhatsapp("");
+    setEmail("");
+    setLogradouro("");
+    setNumero("");
+    setComplemento("");
+    setBairro("");
+    setCidade("");
+    setEstado("");
+    setCep("");
+    setObs("");
+    setShowAddModal(true);
+  };
+
+  const handleEdit = (client: Client) => {
+    setEditingClient(client);
+    setCodigo(client.codigo || "");
+    setNomeRazao(client.nome_razao || "");
+    setCpfCnpj(client.cpf_cnpj || "");
+    setIe(client.inscricao_estadual || "");
+    setTelefone(client.telefone || "");
+    setWhatsapp(client.whatsapp || "");
+    setEmail(client.email || "");
+    setLogradouro(client.logradouro || "");
+    setNumero(client.numero || "");
+    setComplemento(client.complemento || "");
+    setBairro(client.bairro || "");
+    setCidade(client.cidade || "");
+    setEstado(client.estado || "");
+    setCep(client.cep || "");
+    setObs(client.observacoes || "");
+    setShowAddModal(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
+    try {
+      await api.delete(`/clients/${id}`);
+      alert("Cliente excluído com sucesso!");
+      loadClients();
+    } catch (err: any) {
+      alert(err.message || "Erro ao excluir cliente.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!codigo || !nomeRazao || !cpfCnpj) {
@@ -81,28 +139,18 @@ export default function ClientsPage() {
     };
 
     try {
-      await api.post("/clients", payload);
-      alert("Cliente cadastrado com sucesso!");
+      if (editingClient) {
+        await api.put(`/clients/${editingClient.id}`, payload);
+        alert("Cliente atualizado com sucesso!");
+      } else {
+        await api.post("/clients", payload);
+        alert("Cliente cadastrado com sucesso!");
+      }
       setShowAddModal(false);
-      // Reset form
-      setCodigo("");
-      setNomeRazao("");
-      setCpfCnpj("");
-      setIe("");
-      setTelefone("");
-      setWhatsapp("");
-      setEmail("");
-      setLogradouro("");
-      setNumero("");
-      setComplemento("");
-      setBairro("");
-      setCidade("");
-      setEstado("");
-      setCep("");
-      setObs("");
+      setEditingClient(null);
       loadClients();
     } catch (err: any) {
-      alert(err.message || "Erro ao cadastrar cliente.");
+      alert(err.message || "Erro ao salvar cliente.");
     }
   };
 
@@ -126,7 +174,7 @@ export default function ClientsPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={handleAddClick}
           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition"
         >
           ➕ Adicionar Cliente
@@ -157,6 +205,7 @@ export default function ClientsPage() {
                   <th className="py-2.5 px-3">WhatsApp</th>
                   <th className="py-2.5 px-3">E-mail</th>
                   <th className="py-2.5 px-3">Cidade / UF</th>
+                  <th className="py-2.5 px-3 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800/40 text-neutral-200">
@@ -171,6 +220,22 @@ export default function ClientsPage() {
                     <td className="py-2.5 px-3 text-neutral-400">
                       {c.cidade ? `${c.cidade}/${c.estado || ""}` : "—"}
                     </td>
+                    <td className="py-2.5 px-3 text-center space-x-2">
+                      <button
+                        onClick={() => handleEdit(c)}
+                        className="p-1 hover:bg-neutral-800 text-neutral-400 hover:text-emerald-400 rounded transition"
+                        title="Editar"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="p-1 hover:bg-neutral-800 text-neutral-400 hover:text-red-400 rounded transition"
+                        title="Excluir"
+                      >
+                        🗑️
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -181,11 +246,13 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* ADD CLIENT MODAL */}
+      {/* ADD/EDIT CLIENT MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form onSubmit={handleSubmit} className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-neutral-200">➕ Novo Cadastro de Cliente</h3>
+            <h3 className="text-lg font-bold text-neutral-200">
+              {editingClient ? "✏️ Editar Cadastro de Cliente" : "➕ Novo Cadastro de Cliente"}
+            </h3>
             
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
@@ -350,7 +417,10 @@ export default function ClientsPage() {
             <div className="flex justify-end gap-3 pt-4 border-t border-neutral-800">
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingClient(null);
+                }}
                 className="px-4 py-2 text-xs font-bold border border-neutral-800 rounded-lg"
               >
                 Cancelar
@@ -359,7 +429,7 @@ export default function ClientsPage() {
                 type="submit"
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg"
               >
-                Salvar Cadastro
+                {editingClient ? "Salvar Alterações" : "Salvar Cadastro"}
               </button>
             </div>
           </form>

@@ -31,12 +31,13 @@ def read_service(service_id: int, db: Session = Depends(get_db)):
     return db_service
 
 @router.put("/{service_id}", response_model=schemas.ServiceResponse)
-def update_service(service_id: int, service_in: schemas.ServiceCreate, db: Session = Depends(get_db)):
+def update_service(service_id: int, service_in: schemas.ServiceUpdate, db: Session = Depends(get_db)):
     db_service = db.query(Servico).filter(Servico.id == service_id).first()
     if not db_service:
         raise HTTPException(status_code=404, detail="Serviço não encontrado.")
     
-    for field, value in service_in.model_dump().items():
+    update_data = service_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(db_service, field, value)
     
     db.commit()
