@@ -362,3 +362,25 @@ class UserResponseSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TenantResponseSchema(BaseModel):
+    id: int
+    tenant_code: str
+    name: str
+    is_active: bool
+    created_at: datetime
+    admin_email: Optional[str] = None
+    admin_name: Optional[str] = None
+    db_size_kb: Optional[float] = 0.0
+
+    class Config:
+        from_attributes = True
+
+class TenantStatusUpdateSchema(BaseModel):
+    is_active: bool
+
+class SuperAdminStatsSchema(BaseModel):
+    total_tenants: int
+    active_tenants: int
+    inactive_tenants: int
+    total_db_size_kb: float

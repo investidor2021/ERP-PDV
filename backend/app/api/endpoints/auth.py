@@ -93,6 +93,11 @@ def login(payload: schemas.LoginSchema, db: Session = Depends(get_master_db)):
 
     # Fetch Tenant name
     tenant = db.query(Tenant).filter(Tenant.tenant_code == user.tenant_code).first()
+    if user.role != "SUPER_ADMIN" and tenant and not tenant.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso bloqueado. A licença desta empresa está inativa. Entre em contato com o suporte."
+        )
     company_name = tenant.name if tenant else "Matriz"
 
     access_token = create_access_token(

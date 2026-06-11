@@ -45,18 +45,23 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
     window.location.href = "/login";
   };
 
-  const navItems = [
-    { href: "/", label: "Dashboard Geral", icon: "📊" },
-    { href: "/pdv", label: "Venda Rápida (PDV)", icon: "⚡", bold: true },
-    { href: "/products", label: "Catálogo & Lotes", icon: "📦" },
-    { href: "/services", label: "Cadastro de Serviços", icon: "🛠️" },
-    { href: "/clients", label: "Cadastro de Clientes", icon: "👥" },
-    { href: "/budgets", label: "Orçamentos", icon: "📋" },
-    { href: "/sales", label: "Histórico de Vendas", icon: "🔄" },
-    { href: "/finance", label: "Contas a Receber", icon: "💵" },
-    { href: "/reports", label: "Relatórios & Logs", icon: "📉" },
-    { href: "/settings", label: "Configurações", icon: "⚙️" },
-  ];
+  const navItems = userInfo?.role === "SUPER_ADMIN"
+    ? [
+        { href: "/super-admin", label: "Controle SaaS", icon: "🏢" },
+        { href: "/settings", label: "Configurações", icon: "⚙️" },
+      ]
+    : [
+        { href: "/", label: "Dashboard Geral", icon: "📊" },
+        { href: "/pdv", label: "Venda Rápida (PDV)", icon: "⚡", bold: true },
+        { href: "/products", label: "Catálogo & Lotes", icon: "📦" },
+        { href: "/services", label: "Cadastro de Serviços", icon: "🛠️" },
+        { href: "/clients", label: "Cadastro de Clientes", icon: "👥" },
+        { href: "/budgets", label: "Orçamentos", icon: "📋" },
+        { href: "/sales", label: "Histórico de Vendas", icon: "🔄" },
+        { href: "/finance", label: "Contas a Receber", icon: "💵" },
+        { href: "/reports", label: "Relatórios & Logs", icon: "📉" },
+        { href: "/settings", label: "Configurações", icon: "⚙️" },
+      ];
 
   return (
     <div className="h-full flex overflow-hidden w-full">
@@ -69,7 +74,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
         {/* Logo and Collapse Toggle */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-neutral-800 shrink-0">
           {!isCollapsed ? (
-            <Link href="/" className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+            <Link href={userInfo?.role === "SUPER_ADMIN" ? "/super-admin" : "/"} className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
               <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
                 📦 ERP PEPS
               </span>
@@ -78,7 +83,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
               </span>
             </Link>
           ) : (
-            <Link href="/" className="text-xl font-black text-emerald-400 mx-auto">
+            <Link href={userInfo?.role === "SUPER_ADMIN" ? "/super-admin" : "/"} className="text-xl font-black text-emerald-400 mx-auto">
               📦
             </Link>
           )}
@@ -97,19 +102,31 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
         {/* User Session Info / Enterprise Name */}
         <div className="border-b border-neutral-800/80 shrink-0">
           {!isCollapsed ? (
-            <div className="px-4 py-3 bg-neutral-950/25 flex flex-col space-y-1">
-              <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">Empresa Conectada</span>
-              <span className="text-xs font-bold text-emerald-400 truncate max-w-full" title={userInfo?.company_name || "Matriz (Padrão)"}>
-                🏢 {userInfo?.company_name || "Matriz (Padrão)"}
-              </span>
-              <span className="text-[10px] text-neutral-400 truncate max-w-full mt-0.5">
-                👤 {userInfo?.name || "Operador"} ({userInfo?.role === "ADMIN" ? "Admin" : "Usuário"})
-              </span>
-            </div>
+            userInfo?.role === "SUPER_ADMIN" ? (
+              <div className="px-4 py-3 bg-neutral-950/25 flex flex-col space-y-1">
+                <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">Sistema SaaS</span>
+                <span className="text-xs font-bold text-emerald-400 truncate max-w-full" title="Painel Geral (SaaS)">
+                  🏢 Painel Geral (SaaS)
+                </span>
+                <span className="text-[10px] text-neutral-400 truncate max-w-full mt-0.5">
+                  👤 {userInfo?.name || "Operador"} (Super Admin)
+                </span>
+              </div>
+            ) : (
+              <div className="px-4 py-3 bg-neutral-950/25 flex flex-col space-y-1">
+                <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">Empresa Conectada</span>
+                <span className="text-xs font-bold text-emerald-400 truncate max-w-full" title={userInfo?.company_name || "Matriz (Padrão)"}>
+                  🏢 {userInfo?.company_name || "Matriz (Padrão)"}
+                </span>
+                <span className="text-[10px] text-neutral-400 truncate max-w-full mt-0.5">
+                  👤 {userInfo?.name || "Operador"} ({userInfo?.role === "ADMIN" ? "Admin" : "Usuário"})
+                </span>
+              </div>
+            )
           ) : (
             <div 
               className="py-3 text-center text-xs font-black text-emerald-400 bg-neutral-950/20 cursor-pointer hover:bg-neutral-850 transition"
-              title={`Empresa: ${userInfo?.company_name || "Matriz (Padrão)"} \nOperador: ${userInfo?.name || "Operador"}`}
+              title={userInfo?.role === "SUPER_ADMIN" ? "Painel Geral (SaaS) \nOperador: Super Admin" : `Empresa: ${userInfo?.company_name || "Matriz (Padrão)"} \nOperador: ${userInfo?.name || "Operador"}`}
             >
               🏢
             </div>

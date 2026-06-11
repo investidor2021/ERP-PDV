@@ -37,6 +37,19 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const savedUser = localStorage.getItem("user_info");
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (user.role === "SUPER_ADMIN") {
+          window.location.href = "/super-admin";
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     async function loadData() {
       try {
         setLoading(true);

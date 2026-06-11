@@ -16,6 +16,54 @@ from app.core.db_seeding import seed_database
 Base.metadata.create_all(bind=engine)
 BaseMaster.metadata.create_all(bind=master_engine)
 
+def run_migrations_for_master(target_engine):
+    from sqlalchemy.orm import Session
+    db = Session(bind=target_engine)
+    try:
+        try:
+            db.execute(text("ALTER TABLE tenants ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+            db.commit()
+            print("Migration Master: tenants.is_active adicionado.")
+        except Exception:
+            db.rollback()
+    finally:
+        db.close()
+
+def seed_super_admin(target_engine):
+    from sqlalchemy.orm import Session
+    from app.models.master_models import User
+    from app.core.security import hash_password
+    db = Session(bind=target_engine)
+    try:
+        sa = db.query(User).filter(User.role == "SUPER_ADMIN").first()
+        if not sa:
+            admin_pwd = hash_password("admin123")
+            super_user = User(
+                username="admin@erppeps.com",
+                password_hash=admin_pwd,
+                name="Super Admin",
+                role="SUPER_ADMIN",
+                tenant_code="master"
+            )
+            db.add(super_user)
+            db.commit()
+            print("Seed Master: Usuario SUPER_ADMIN criado com sucesso.")
+    except Exception as e:
+        db.rollback()
+        print(f"Alerta: erro ao criar seed SUPER_ADMIN: {e}")
+    finally:
+        db.close()
+
+try:
+    run_migrations_for_master(master_engine)
+except Exception as e:
+    print(f"Alerta de migracao no master: {e}")
+
+try:
+    seed_super_admin(master_engine)
+except Exception as e:
+    print(f"Alerta de seed no master: {e}")
+
 def run_migrations_for_engine(target_engine):
     db = SessionLocal(bind=target_engine)
     try:

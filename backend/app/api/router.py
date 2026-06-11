@@ -1,9 +1,10 @@
 from fastapi import APIRouter
-from app.api.endpoints import products, clients, services, sales, finance, budgets, dashboard, reports, settings, auth
+from app.api.endpoints import products, clients, services, sales, finance, budgets, dashboard, reports, settings, auth, super_admin
 
 api_router = APIRouter()
 
 api_router.include_router(auth.router, prefix="/auth", tags=["Autenticação"])
+api_router.include_router(super_admin.router, prefix="/super-admin", tags=["Super Admin"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(products.router, prefix="/products", tags=["Produtos"])
 api_router.include_router(clients.router, prefix="/clients", tags=["Clientes"])

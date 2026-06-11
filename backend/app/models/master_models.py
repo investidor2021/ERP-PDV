@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.orm import declarative_base
 from datetime import datetime
 
@@ -10,6 +10,7 @@ class Tenant(BaseMaster):
     id = Column(Integer, primary_key=True, index=True)
     tenant_code = Column(String, unique=True, index=True, nullable=False) # e.g. "empresa_a"
     name = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class User(BaseMaster):

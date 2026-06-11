@@ -75,6 +75,19 @@ def get_db(request: Request = None):
             payload = decode_access_token(token)
             if payload:
                 tenant_id = payload.get("tenant_code", "default")
+                role = payload.get("role", "USER")
+                if tenant_id != "default" and role != "SUPER_ADMIN":
+                    from app.models.master_models import Tenant
+                    master_session = MasterSessionLocal()
+                    try:
+                        t = master_session.query(Tenant).filter(Tenant.tenant_code == tenant_id).first()
+                        if t and not t.is_active:
+                            raise HTTPException(
+                                status_code=403,
+                                detail="Acesso bloqueado. A licenca desta empresa esta inativa. Entre em contato com o suporte."
+                            )
+                    finally:
+                        master_session.close()
             else:
                 raise HTTPException(
                     status_code=401, 
