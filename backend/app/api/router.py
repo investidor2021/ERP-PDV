@@ -1,0 +1,14 @@
+from fastapi import APIRouter
+from app.api.endpoints import products, clients, services, sales, finance, budgets, dashboard, reports, settings
+
+api_router = APIRouter()
+
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+api_router.include_router(products.router, prefix="/products", tags=["Produtos"])
+api_router.include_router(clients.router, prefix="/clients", tags=["Clientes"])
+api_router.include_router(services.router, prefix="/services", tags=["Serviços"])
+api_router.include_router(sales.router, prefix="/sales", tags=["Vendas & Comissões"])
+api_router.include_router(finance.router, prefix="/finance", tags=["Financeiro"])
+api_router.include_router(budgets.router, prefix="/budgets", tags=["Orçamentos"])
+api_router.include_router(reports.router, prefix="/reports", tags=["Relatórios"])
+api_router.include_router(settings.router, prefix="/settings", tags=["Configurações"])
