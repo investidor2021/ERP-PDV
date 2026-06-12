@@ -85,6 +85,13 @@ export default function ProductsPage() {
   const [xmlError, setXmlError] = useState("");
   const [xmlLoading, setXmlLoading] = useState(false);
 
+  // Spreadsheet import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importSpreadResult, setImportSpreadResult] = useState<any | null>(null);
+  const [importSpreadError, setImportSpreadError] = useState("");
+  const [importSpreadLoading, setImportSpreadLoading] = useState(false);
+
   // Editing state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -346,6 +353,12 @@ export default function ProductsPage() {
             className="px-4 py-2 border border-neutral-800 hover:bg-neutral-800 text-xs font-bold rounded-lg transition"
           >
             ➕ Cadastrar Manual
+          </button>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2 border border-emerald-800 bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-400 text-xs font-bold rounded-lg transition"
+          >
+            📊 Importar Planilha
           </button>
           <button
             onClick={() => setShowXmlModal(true)}
@@ -827,6 +840,7 @@ export default function ProductsPage() {
       )}
 
       {/* XML UPLOAD MODAL */}
+      {/* XML Import Modal */}
       {showXmlModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-lg w-full p-6 space-y-4">
@@ -882,6 +896,138 @@ export default function ProductsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Spreadsheet Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-xl w-full p-6 space-y-5">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-200">📊 Importar Produtos via Planilha</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">Aceita CSV ou XLSX. Use a planilha modelo para garantir o formato correto.</p>
+              </div>
+              <button onClick={() => { setShowImportModal(false); setImportFile(null); setImportSpreadResult(null); setImportSpreadError(""); }}
+                className="text-neutral-500 hover:text-neutral-200 text-xl leading-none">✕</button>
+            </div>
+
+            {/* Step 1: Download template */}
+            <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-4 space-y-2">
+              <p className="text-xs font-bold text-neutral-300">① Baixe a planilha modelo e preencha seus produtos</p>
+              <p className="text-[11px] text-neutral-500 leading-relaxed">
+                A planilha modelo já vem com os cabeçalhos corretos e uma linha de exemplo.
+                Preencha cada produto em uma linha e salve o arquivo.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="text-[10px] font-mono w-full border-collapse">
+                  <thead>
+                    <tr className="bg-neutral-900">
+                      {["codigo*","descricao*","preco_custo*","preco_venda","estoque_inicial","categoria","marca","ncm","unidade","est_minimo"].map(h => (
+                        <th key={h} className={`px-2 py-1 border border-neutral-800 text-left whitespace-nowrap ${h.endsWith('*') ? 'text-emerald-400' : 'text-neutral-500'}`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="text-neutral-400">
+                      {["SKU-001","Produto Ex.","10.50","29.90","50","Eletrônicos","Samsung","8471.30.12","UN","5"].map((v,i) => (
+                        <td key={i} className="px-2 py-1 border border-neutral-800 whitespace-nowrap">{v}</td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[10px] text-neutral-600">* Campos obrigatórios. Campos vazios serão ignorados.</p>
+              <a
+                href="http://localhost:8000/api/products/template-csv"
+                download
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-emerald-400 text-xs font-bold rounded-lg transition"
+              >
+                ⬇️ Baixar Planilha Modelo (CSV)
+              </a>
+            </div>
+
+            {/* Step 2: Upload */}
+            <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-4 space-y-3">
+              <p className="text-xs font-bold text-neutral-300">② Selecione e envie o arquivo preenchido</p>
+
+              {importSpreadError && (
+                <div className="text-xs text-red-400 bg-red-950/20 border border-red-900/50 p-2.5 rounded-lg">
+                  {importSpreadError}
+                </div>
+              )}
+
+              {importSpreadResult && (
+                <div className="space-y-2">
+                  <div className="text-xs text-emerald-400 bg-emerald-950/20 border border-emerald-900/50 p-3 rounded-lg">
+                    <p className="font-bold mb-1">{importSpreadResult.message}</p>
+                    <p>✅ Criados: <strong>{importSpreadResult.criados}</strong> &nbsp; 🔄 Atualizados: <strong>{importSpreadResult.atualizados}</strong></p>
+                  </div>
+                  {importSpreadResult.erros?.length > 0 && (
+                    <div className="text-xs text-yellow-400 bg-yellow-950/20 border border-yellow-900/50 p-3 rounded-lg space-y-1">
+                      <p className="font-bold">⚠️ Avisos ({importSpreadResult.erros.length}):</p>
+                      {importSpreadResult.erros.map((e: string, i: number) => (
+                        <p key={i} className="font-mono text-[10px]">{e}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="border-2 border-dashed border-neutral-800 rounded-xl p-6 text-center bg-neutral-950/30 flex flex-col items-center gap-2">
+                <span className="text-3xl">{importFile ? "📊" : "📂"}</span>
+                <input
+                  id="spreadsheet-upload"
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={(e) => { setImportFile(e.target.files?.[0] || null); setImportSpreadResult(null); setImportSpreadError(""); }}
+                  className="text-xs text-neutral-400 file:bg-neutral-900 file:border-neutral-800 file:text-neutral-300 file:px-3 file:py-1.5 file:rounded file:text-xs hover:file:bg-neutral-800 cursor-pointer"
+                />
+                {importFile && <p className="text-[10px] text-emerald-400 font-mono">{importFile.name} ({(importFile.size/1024).toFixed(1)} KB)</p>}
+                <p className="text-[10px] text-neutral-600">Formatos aceitos: .csv (separado por ; ou ,) e .xlsx</p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowImportModal(false); setImportFile(null); setImportSpreadResult(null); setImportSpreadError(""); }}
+                  className="px-4 py-2 text-xs font-bold border border-neutral-800 rounded-lg"
+                >
+                  Fechar
+                </button>
+                <button
+                  disabled={importSpreadLoading || !importFile}
+                  onClick={async () => {
+                    if (!importFile) return;
+                    setImportSpreadLoading(true);
+                    setImportSpreadError("");
+                    setImportSpreadResult(null);
+                    try {
+                      const formData = new FormData();
+                      formData.append("file", importFile);
+                      const token = localStorage.getItem("token");
+                      const res = await fetch("http://localhost:8000/api/products/importar-planilha", {
+                        method: "POST",
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                        body: formData,
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.detail || "Erro ao importar");
+                      setImportSpreadResult(data);
+                      loadProducts();
+                    } catch (err: any) {
+                      setImportSpreadError(err.message || "Erro ao enviar arquivo.");
+                    } finally {
+                      setImportSpreadLoading(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white text-xs font-bold rounded-lg transition"
+                >
+                  {importSpreadLoading ? "Importando..." : "🚀 Importar Agora"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
