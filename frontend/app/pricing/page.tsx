@@ -607,7 +607,6 @@ export default function PricingPage() {
                       <span className="text-[9px] text-neutral-500 block uppercase">ROI Operacional</span>
                       <span className="text-lg font-black text-neutral-100">{onlineResult.roi.toFixed(1)}%</span>
                     </div>
-                    </div>
                   </div>
 
                   {selectedProductId && (
