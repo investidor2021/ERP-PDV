@@ -11,6 +11,8 @@ class ProductBase(BaseModel):
     unidade: Optional[str] = "UN"
     ncm: Optional[str] = None
     preco_venda: float = 0.0
+    preco_custo: float = 0.0
+    preco_sugerido_venda: Optional[float] = None
     estoque_minimo: Optional[int] = 0
     estoque_maximo: Optional[int] = 0
     marca: Optional[str] = None
@@ -32,6 +34,8 @@ class ProductUpdate(BaseModel):
     unidade: Optional[str] = None
     ncm: Optional[str] = None
     preco_venda: Optional[float] = None
+    preco_custo: Optional[float] = None
+    preco_sugerido_venda: Optional[float] = None
     estoque_minimo: Optional[int] = None
     estoque_maximo: Optional[int] = None
     marca: Optional[str] = None

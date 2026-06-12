@@ -14,7 +14,9 @@ class Produto(Base):
     unidade = Column(String, default="UN")
     ncm = Column(String, nullable=True)
     estoque_atual = Column(Integer, default=0)
-    preco_venda = Column(Float, default=0.0)
+    preco_venda = Column(Float, default=0.0)         # mantido para compatibilidade NF-e / legado
+    preco_custo = Column(Float, default=0.0)          # custo de compra (campo principal)
+    preco_sugerido_venda = Column(Float, nullable=True)  # sugerido pelo módulo de precificação
     
     # New commercial and logisitic attributes
     estoque_minimo = Column(Integer, default=0)
@@ -26,6 +28,7 @@ class Produto(Base):
     cfop_padrao = Column(String, nullable=True)
     origem_mercadoria = Column(Integer, default=0)
     localizacao = Column(String, nullable=True)
+
 
     # Relationships
     lotes = relationship("Lote", back_populates="produto", cascade="all, delete-orphan")

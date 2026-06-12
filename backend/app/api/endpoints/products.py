@@ -86,3 +86,19 @@ def read_product_average_costs(product_id: int, db: Session = Depends(get_db)):
         "custo_medio_historico": historico,
         "custo_medio_atual": atual
     }
+
+@router.put("/{product_id}/preco-sugerido")
+def update_suggested_price(product_id: int, payload: dict, db: Session = Depends(get_db)):
+    """Salva o preço sugerido de venda calculado pelo módulo de precificação."""
+    db_prod = product_repo.get(db, product_id)
+    if not db_prod:
+        raise HTTPException(status_code=404, detail="Produto não encontrado.")
+    preco = payload.get("preco_sugerido_venda")
+    if preco is None or preco <= 0:
+        raise HTTPException(status_code=422, detail="Preço sugerido deve ser maior que zero.")
+    db_prod.preco_sugerido_venda = float(preco)
+    # Also sync to preco_venda for NF-e compatibility
+    db_prod.preco_venda = float(preco)
+    db.commit()
+    db.refresh(db_prod)
+    return {"message": "Preço sugerido de venda salvo com sucesso!", "preco_sugerido_venda": db_prod.preco_sugerido_venda}
