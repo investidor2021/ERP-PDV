@@ -1,12 +1,14 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.orm import declarative_base
 from datetime import datetime
+from app.core.database import IS_POSTGRES
 
 BaseMaster = declarative_base()
 
 class Tenant(BaseMaster):
     __tablename__ = "tenants"
-    __table_args__ = {"schema": "public"}
+    if IS_POSTGRES:
+        __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, index=True)
     tenant_code = Column(String, unique=True, index=True, nullable=False) # e.g. "empresa_a"
@@ -16,7 +18,8 @@ class Tenant(BaseMaster):
 
 class User(BaseMaster):
     __tablename__ = "users"
-    __table_args__ = {"schema": "public"}
+    if IS_POSTGRES:
+        __table_args__ = {"schema": "public"}
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False) # e.g. "email@email.com"

@@ -164,5 +164,52 @@ def test_erp_peps_flow():
             except PermissionError:
                 pass
 
+def test_pricing_calculations():
+    print("Iniciando testes do motor de precificação...")
+    from app.api.endpoints.pricing import solve_physical_pricing, solve_online_pricing
+    import asyncio
+    
+    # 1. Test Physical Pricing Simulator
+    # Product cost: 10.0, packaging: 0.50, operational: 1.00 -> Unit cost = 11.50
+    # Desired Margin: 20%
+    # Rates: tax=4%, commission=2%, card_fee=2.5% -> Total percent cost = 8.5%
+    # P = 11.50 / (1.0 - 0.085 - 0.20) = 11.50 / 0.715 = 16.0839... -> 16.08
+    loop = asyncio.get_event_loop()
+    res_phys = loop.run_until_complete(solve_physical_pricing(
+        purchase_cost=10.0,
+        packaging_cost=0.50,
+        operational_cost=1.00,
+        tax_rate=4.0,
+        commission_rate=2.0,
+        payment_fee_rate=2.5,
+        mode=2,
+        input_value=20.0
+    ))
+    assert res_phys.price == 16.08, f"Preço físico incorreto: {res_phys.price}"
+    assert abs(res_phys.margin - 20.0) < 0.1, f"Margem física incorreta: {res_phys.margin}"
+    
+    # 2. Test Online Pricing Simulator (Mercado Livre Classic 2026)
+    # Product cost: 50.0, packaging: 1.50, operational: 2.00 -> Unit cost = 53.50
+    # Mode: 1 (Selling price) = 100.0
+    # Classic rate for Eletrônicos (mode electronics) = 10.5%, tax = 4.0%
+    # Price >= 79.0 -> Shipping = 22.55 (fits 0.5kg)
+    # Net profit: 100.0 - 53.50 - 10.5 (fees) - 22.55 (shipping) - 4.0 (tax) = 9.45
+    res_online = loop.run_until_complete(solve_online_pricing(
+        purchase_cost=50.0,
+        packaging_cost=1.50,
+        operational_cost=2.00,
+        tax_rate=4.0,
+        marketplace="mercado_livre_classic",
+        mode=1,
+        input_value=100.0,
+        reputation="verde",
+        category="eletronico",
+        weight=0.5
+    ))
+    assert res_online.price == 100.0
+    assert res_online.net_profit == 9.45
+    print("Testes do motor de precificação passaram com sucesso! (OK)")
+
 if __name__ == "__main__":
     test_erp_peps_flow()
+    test_pricing_calculations()

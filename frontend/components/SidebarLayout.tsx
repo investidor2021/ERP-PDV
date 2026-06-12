@@ -59,6 +59,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
         { href: "/budgets", label: "Orçamentos", icon: "📋" },
         { href: "/sales", label: "Histórico de Vendas", icon: "🔄" },
         { href: "/finance", label: "Contas a Receber", icon: "💵" },
+        { href: "/pricing", label: "Precificação e Margens", icon: "🏷️" },
         { href: "/reports", label: "Relatórios & Logs", icon: "📉" },
         { href: "/settings", label: "Configurações", icon: "⚙️" },
       ];

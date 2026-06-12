@@ -32,6 +32,7 @@ else:
     default_path = os.path.join(backend_dir, "erp_peps.db")
     engine = create_engine(f"sqlite:///{default_path}", connect_args={"check_same_thread": False})
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    postgres_engine = None
 
 # Cache of tenant engines to avoid creating pools repeatedly
 tenant_engines = {}
