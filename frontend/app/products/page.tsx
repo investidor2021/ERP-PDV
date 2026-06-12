@@ -13,6 +13,8 @@ interface Product {
   ncm: string | null;
   estoque_atual: number;
   preco_venda: number;
+  preco_custo: number;
+  preco_sugerido_venda: number | null;
   estoque_minimo: number;
   estoque_maximo: number;
   marca: string | null;
@@ -31,6 +33,42 @@ interface Lot {
   quantidade_saldo: number;
   custo_unitario: number;
 }
+
+const ML_CATEGORIES = [
+  "Acessórios para Veículos", "Agro", "Alimentos e Bebidas", "Animais",
+  "Antiguidades e Coleções", "Arte, Papelaria e Armarinho", "Bebês",
+  "Beleza e Cuidado Pessoal", "Brinquedos e Hobbies", "Calçados, Roupas e Bolsas",
+  "Câmeras e Acessórios", "Carros, Motos e Outros", "Casa, Móveis e Decoração",
+  "Celulares e Telefones", "Construção", "Eletrodomésticos", "Eletrônicos, Áudio e Vídeo",
+  "Esportes e Fitness", "Ferramentas", "Festas e Lembrancinhas", "Games",
+  "Imóveis", "Indústria e Comércio", "Informática", "Ingressos", "Instrumentos Musicais",
+  "Joias e Relógios", "Livros, Revistas e Comics", "Música, Filmes e Seriados", "Saúde", "Serviços"
+];
+
+const COMMON_NCMS = [
+  { code: "64039990", desc: "Outros calçados com sola exterior de borracha/plástico e parte superior de couro" },
+  { code: "61091000", desc: "Camisetas de algodão" },
+  { code: "62034200", desc: "Calças, jardineiras, bermudas e shorts de algodão (Masculino)" },
+  { code: "62046200", desc: "Calças, jardineiras, bermudas e shorts de algodão (Feminino)" },
+  { code: "85171231", desc: "Telefones celulares" },
+  { code: "84713012", desc: "Máquinas automáticas para processamento de dados, portáteis (Notebooks)" },
+  { code: "85176215", desc: "Roteadores digitais" },
+  { code: "39241000", desc: "Serviços de mesa e outros utensílios de mesa ou de cozinha, de plásticos" },
+  { code: "95030099", desc: "Outros brinquedos" },
+  { code: "33049990", desc: "Outros produtos de beleza ou de maquiagem preparados" },
+  { code: "85287200", desc: "Aparelhos receptores de televisão (TVs)" },
+  { code: "64029990", desc: "Outros calçados com sola exterior e parte superior de borracha ou plásticos" },
+  { code: "42022210", desc: "Bolsas de folhas de plásticos" },
+  { code: "42022220", desc: "Bolsas de matérias têxteis" },
+  { code: "85444200", desc: "Cabos elétricos munidos de peças de conexão" },
+  { code: "94036000", desc: "Outros móveis de madeira" },
+  { code: "94016100", desc: "Outros assentos com armação de madeira, estofados" },
+  { code: "63022100", desc: "Roupas de cama, estampadas, de algodão" },
+  { code: "63026000", desc: "Roupas de toucador ou de cozinha, de tecidos atoalhados de algodão" },
+  { code: "71179000", desc: "Outras bijuterias" },
+  { code: "90041000", desc: "Óculos de sol" },
+  { code: "91021110", desc: "Relógios de pulso, de mostrador exclusivamente mecânico" }
+];
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -56,7 +94,7 @@ export default function ProductsPage() {
   const [prodBar, setProdBar] = useState("");
   const [prodUnit, setProdUnit] = useState("UN");
   const [prodNcm, setProdNcm] = useState("");
-  const [prodPrice, setProdPrice] = useState("");
+  const [prodCost, setProdCost] = useState("");
   const [prodMinStock, setProdMinStock] = useState("0");
   const [prodMaxStock, setProdMaxStock] = useState("0");
   const [prodBrand, setProdBrand] = useState("");
@@ -114,9 +152,12 @@ export default function ProductsPage() {
     e.preventDefault();
     if (!selectedProductId || !newPrice) return;
     try {
-      await api.put(`/products/${selectedProductId}`, { preco_venda: parseFloat(newPrice) });
+      await api.put(`/products/${selectedProductId}`, { 
+        preco_custo: parseFloat(newPrice),
+        preco_venda: parseFloat(newPrice) // Keeping sync for NFe 
+      });
       setNewPrice("");
-      alert("Preço de venda atualizado com sucesso!");
+      alert("Preço de custo atualizado com sucesso!");
       loadProducts();
     } catch (err: any) {
       alert(err.message || "Erro ao atualizar preço.");
@@ -153,7 +194,7 @@ export default function ProductsPage() {
     setProdBar("");
     setProdUnit("UN");
     setProdNcm("");
-    setProdPrice("");
+    setProdCost("");
     setProdMinStock("0");
     setProdMaxStock("0");
     setProdBrand("");
@@ -173,7 +214,7 @@ export default function ProductsPage() {
     setProdBar(product.codigo_barras || "");
     setProdUnit(product.unidade || "UN");
     setProdNcm(product.ncm || "");
-    setProdPrice(String(product.preco_venda || 0.0));
+    setProdCost(String(product.preco_custo || 0.0));
     setProdMinStock(String(product.estoque_minimo || 0));
     setProdMaxStock(String(product.estoque_maximo || 0));
     setProdBrand(product.marca || "");
@@ -211,13 +252,14 @@ export default function ProductsPage() {
       descricao: prodDesc,
       unidade: prodUnit,
       ncm: prodNcm || null,
-      preco_venda: parseFloat(prodPrice) || 0.0,
+      preco_custo: parseFloat(prodCost) || 0.0,
+      preco_venda: parseFloat(prodCost) || 0.0, // Keeping sync for NFe
       estoque_minimo: parseInt(prodMinStock) || 0,
       estoque_maximo: parseInt(prodMaxStock) || 0,
       marca: prodBrand || null,
       categoria: prodCategory || null,
-      peso_liquido: parseFloat(prodNetWeight) || 0.0,
-      peso_bruto: parseFloat(prodGrossWeight) || 0.0,
+      peso_liquido: parseFloat(prodNetWeight.replace(',', '.')) || 0.0,
+      peso_bruto: parseFloat(prodGrossWeight.replace(',', '.')) || 0.0,
       cfop_padrao: prodCfop || null,
       origem_mercadoria: parseInt(prodOrigin) || 0,
       localizacao: prodLocation || null
@@ -338,7 +380,8 @@ export default function ProductsPage() {
                     <th className="py-2.5 px-3">Unidade</th>
                     <th className="py-2.5 px-3">NCM</th>
                     <th className="py-2.5 px-3 text-right">Saldo</th>
-                    <th className="py-2.5 px-3 text-right">Preço Venda</th>
+                    <th className="py-2.5 px-3 text-right">Preço Custo</th>
+                    <th className="py-2.5 px-3 text-right text-emerald-400">Preço Sugerido 💡</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800/40">
@@ -356,7 +399,10 @@ export default function ProductsPage() {
                       <td className="py-2.5 px-3 text-neutral-400">{p.ncm || "—"}</td>
                       <td className="py-2.5 px-3 text-right">{p.estoque_atual}</td>
                       <td className="py-2.5 px-3 text-right font-bold text-neutral-200">
-                        R$ {p.preco_venda.toFixed(2)}
+                        R$ {p.preco_custo?.toFixed(2) || '0.00'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-bold text-emerald-400">
+                        {p.preco_sugerido_venda ? `R$ ${p.preco_sugerido_venda.toFixed(2)}` : '—'}
                       </td>
                     </tr>
                   ))}
@@ -441,7 +487,7 @@ export default function ProductsPage() {
                 </div>
 
                 <form onSubmit={updatePrice} className="space-y-2">
-                  <label className="text-[10px] text-neutral-500 uppercase font-bold">Atualizar Preço de Venda (R$)</label>
+                  <label className="text-[10px] text-neutral-500 uppercase font-bold">Atualizar Preço de Custo (R$)</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -561,6 +607,7 @@ export default function ProductsPage() {
                 <label className="text-[10px] text-neutral-400 font-bold uppercase">Categoria</label>
                 <input
                   type="text"
+                  list="category-list"
                   placeholder="Ex: Bebidas, Eletrônicos"
                   value={prodCategory}
                   onChange={(e) => setProdCategory(e.target.value)}
@@ -583,18 +630,20 @@ export default function ProductsPage() {
                 <label className="text-[10px] text-neutral-400 font-bold uppercase">NCM</label>
                 <input
                   type="text"
+                  list="ncm-list"
+                  placeholder="Ex: 64039990"
                   value={prodNcm}
                   onChange={(e) => setProdNcm(e.target.value)}
                   className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] text-neutral-400 font-bold uppercase">Preço Venda R$</label>
+                <label className="text-[10px] text-neutral-400 font-bold uppercase">Preço de Custo R$</label>
                 <input
                   type="number"
                   step="0.01"
-                  value={prodPrice}
-                  onChange={(e) => setProdPrice(e.target.value)}
+                  value={prodCost}
+                  onChange={(e) => setProdCost(e.target.value)}
                   className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none font-bold"
                 />
               </div>
@@ -634,8 +683,8 @@ export default function ProductsPage() {
                 <div className="space-y-1">
                   <label className="text-[9px] text-neutral-500 font-bold uppercase">Peso Líquido (kg)</label>
                   <input
-                    type="number"
-                    step="0.001"
+                    type="text"
+                    placeholder="0,000"
                     value={prodNetWeight}
                     onChange={(e) => setProdNetWeight(e.target.value)}
                     className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-1.5 px-2 text-xs outline-none"
@@ -644,8 +693,8 @@ export default function ProductsPage() {
                 <div className="space-y-1">
                   <label className="text-[9px] text-neutral-500 font-bold uppercase">Peso Bruto (kg)</label>
                   <input
-                    type="number"
-                    step="0.001"
+                    type="text"
+                    placeholder="0,000"
                     value={prodGrossWeight}
                     onChange={(e) => setProdGrossWeight(e.target.value)}
                     className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-1.5 px-2 text-xs outline-none"
@@ -702,6 +751,15 @@ export default function ProductsPage() {
                 {editingProduct ? "Salvar Alterações" : "Cadastrar Produto"}
               </button>
             </div>
+            
+            {/* Datalists for Autocomplete */}
+            <datalist id="category-list">
+              {ML_CATEGORIES.map(cat => <option key={cat} value={cat} />)}
+            </datalist>
+            <datalist id="ncm-list">
+              {COMMON_NCMS.map(n => <option key={n.code} value={n.code}>{n.desc}</option>)}
+            </datalist>
+
           </form>
         </div>
       )}

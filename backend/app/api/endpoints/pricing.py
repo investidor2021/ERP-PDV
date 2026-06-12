@@ -502,8 +502,9 @@ async def get_product_cost(product_id: int, db: Session = Depends(get_db)):
         "id": produto.id,
         "sku": produto.codigo,
         "name": produto.descricao,
-        "purchase_cost": peps_cost,
-        "selling_price": produto.preco_venda,
+        "purchase_cost": peps_cost if peps_cost > 0 else produto.preco_custo,
+        "selling_price": produto.preco_custo,
+        "preco_sugerido_venda": produto.preco_sugerido_venda,
         "weight": produto.peso_bruto or 0.2
     }
 

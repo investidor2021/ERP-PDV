@@ -208,6 +208,16 @@ export default function PricingPage() {
     }
   };
 
+  const handleSaveSuggestedPrice = async (price: number) => {
+    if (!selectedProductId) return;
+    try {
+      await api.put(`/products/${selectedProductId}/preco-sugerido`, { preco_sugerido_venda: price });
+      alert("Preço sugerido salvo com sucesso no cadastro do produto!");
+    } catch (err: any) {
+      alert(err.message || "Erro ao salvar preço sugerido.");
+    }
+  };
+
   const handleCompare = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProductId && !isManualCost) return;
@@ -597,7 +607,17 @@ export default function PricingPage() {
                       <span className="text-[9px] text-neutral-500 block uppercase">ROI Operacional</span>
                       <span className="text-lg font-black text-neutral-100">{onlineResult.roi.toFixed(1)}%</span>
                     </div>
+                    </div>
                   </div>
+
+                  {selectedProductId && (
+                    <button
+                      onClick={() => handleSaveSuggestedPrice(onlineResult.price)}
+                      className="w-full py-2 bg-emerald-900/30 hover:bg-emerald-900/50 text-emerald-400 border border-emerald-800/50 rounded-lg font-bold text-xs transition"
+                    >
+                      💡 Salvar como Preço Sugerido no Produto
+                    </button>
+                  )}
 
                   {/* Breakeven line indicator */}
                   <div className="p-3 bg-neutral-950 border border-neutral-850 rounded-lg text-xs flex justify-between items-center text-neutral-400">
@@ -804,6 +824,15 @@ export default function PricingPage() {
                       <span className="text-lg font-black text-neutral-100">{physResult.roi.toFixed(1)}%</span>
                     </div>
                   </div>
+
+                  {selectedProductId && (
+                    <button
+                      onClick={() => handleSaveSuggestedPrice(physResult.price)}
+                      className="w-full py-2 bg-emerald-900/30 hover:bg-emerald-900/50 text-emerald-400 border border-emerald-800/50 rounded-lg font-bold text-xs transition"
+                    >
+                      💡 Salvar como Preço Sugerido no Produto
+                    </button>
+                  )}
 
                   <div className="p-3 bg-neutral-950 border border-neutral-850 rounded-lg text-xs flex justify-between items-center text-neutral-400">
                     <span>Preço mínimo de venda (Breakeven):</span>
