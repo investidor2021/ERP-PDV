@@ -112,12 +112,16 @@ export default function PricingPage() {
         setLoadedPepsCost(costRes.purchase_cost || 0.0);
         setProductWeight(costRes.weight || 0.2);
         
-        // Populate inputs with product's standard selling price if available
+        // Populate online/comparator with product's standard selling price
+        // For physical: only pre-fill when mode==1 (selling price), not margin/profit modes
         if (costRes.selling_price && costRes.selling_price > 0) {
           const priceStr = costRes.selling_price.toFixed(2);
           setOnlineInputValue(priceStr);
-          setPhysInputValue(priceStr);
           setCompReferencePrice(priceStr);
+          // Only set physical price input when mode is "Preço de Venda" (mode 1)
+          if (physMode === 1) {
+            setPhysInputValue(priceStr);
+          }
         }
       } catch (err) {
         console.error("Erro ao carregar custo PEPS do produto:", err);
@@ -672,7 +676,23 @@ export default function PricingPage() {
                     <label className="text-[9px] text-neutral-400 font-bold uppercase">Cálculo Baseado em</label>
                     <select
                       value={physMode}
-                      onChange={(e) => setPhysMode(parseInt(e.target.value))}
+                      onChange={(e) => {
+                        const newMode = parseInt(e.target.value);
+                        setPhysMode(newMode);
+                        setPhysResult(null);
+                        // Reset input to a sensible default for the selected mode
+                        if (newMode === 1) {
+                          // Selling price: use loaded product price or blank
+                          const sp = loadedPepsCost > 0
+                            ? (loadedPepsCost * 1.4).toFixed(2)  // 40% above cost as suggestion
+                            : "100.00";
+                          setPhysInputValue(sp);
+                        } else if (newMode === 2) {
+                          setPhysInputValue("20");  // 20% margin default
+                        } else {
+                          setPhysInputValue("10.00");  // R$ 10 profit default
+                        }
+                      }}
                       className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none text-neutral-200"
                     >
                       <option value={1}>Preço de Venda Desejado</option>
@@ -682,15 +702,24 @@ export default function PricingPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] text-neutral-400 font-bold uppercase">
+                    <label className="text-[9px] text-neutral-400 font-bold uppercase flex items-center gap-1.5">
                       {physMode === 1 ? "Preço de Venda (R$)" : physMode === 2 ? "Margem Desejada (%)" : "Lucro Líquido (R$)"}
+                      {physMode === 2 && (
+                        <span className="text-[8px] text-emerald-600 font-normal normal-case">(ex: 20 = 20%)</span>
+                      )}
                     </label>
-                    <input
-                      type="text" required
-                      value={physInputValue}
-                      onChange={(e) => setPhysInputValue(e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none text-neutral-200 font-bold"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text" required
+                        value={physInputValue}
+                        placeholder={physMode === 1 ? "ex: 150.00" : physMode === 2 ? "ex: 20" : "ex: 10.00"}
+                        onChange={(e) => setPhysInputValue(e.target.value)}
+                        className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-lg py-2 px-3 text-xs outline-none text-neutral-200 font-bold pr-8"
+                      />
+                      <span className="absolute right-3 top-2 text-neutral-600 text-[10px] font-semibold select-none">
+                        {physMode === 2 ? "%" : "R$"}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="space-y-1">

@@ -406,20 +406,57 @@ async def solve_physical_pricing(
     
     total_percent_costs = r_tax + r_comm + r_pay
     
+    # Validate total percent costs
+    if total_percent_costs >= 1.0:
+        raise HTTPException(
+            status_code=422,
+            detail=f"A soma de impostos + comissão + taxa de maquininha ({total_percent_costs*100:.1f}%) "
+                   f"não pode ser igual ou maior que 100%. Revise as alíquotas."
+        )
+    
     def solve_price(target_margin: float = 0.0, target_profit: float = 0.0) -> float:
         denom = 1.0 - total_percent_costs - target_margin
         if denom > 0:
             return (unit_cost + target_profit) / denom
         return 0.0
+    
+    # Max achievable margin = 1 - total_percent_costs (e.g., with 8.5% costs → max margin ≈ 91.5%)
+    max_margin_pct = (1.0 - total_percent_costs) * 100.0
         
     breakeven_price = solve_price()
     
     calculated_price = 0.0
     if mode == 1:
+        # Mode 1: Specific selling price
+        if input_value <= 0:
+            raise HTTPException(
+                status_code=422,
+                detail="O preço de venda informado deve ser maior que zero."
+            )
         calculated_price = input_value
     elif mode == 2:
-        calculated_price = solve_price(target_margin=input_value/100.0)
+        # Mode 2: Target margin (%)
+        if input_value < 0:
+            raise HTTPException(
+                status_code=422,
+                detail="A margem desejada não pode ser negativa."
+            )
+        if input_value >= max_margin_pct:
+            raise HTTPException(
+                status_code=422,
+                detail=f"A margem desejada ({input_value:.1f}%) é inatingível. "
+                       f"Com as alíquotas configuradas ({total_percent_costs*100:.1f}% de custos percentuais), "
+                       f"a margem máxima alcançável é de {max_margin_pct:.1f}%. "
+                       f"Reduza a margem desejada ou revise as alíquotas."
+            )
+        calculated_price = solve_price(target_margin=input_value / 100.0)
     elif mode == 3:
+        # Mode 3: Target net profit (R$)
+        if input_value < 0:
+            raise HTTPException(
+                status_code=422,
+                detail="O lucro líquido desejado não pode ser negativo."
+            )
         calculated_price = solve_price(target_profit=input_value)
         
     calculated_price = round(max(calculated_price, 0.01), 2)
